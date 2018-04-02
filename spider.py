@@ -10,6 +10,9 @@ import threading
 from pymongo import MongoClient
 
 
+targetHost="https://www.xxbiquge.com"
+targetId = "74_74821"
+
 
 def getChapterTextFromHtml(novel_html):
 
@@ -59,7 +62,8 @@ def getChapterAllFromHtml(novel_html):
 
 
 def getURLs():
-	html = requests.get("https://www.xxbiquge.com/65_65700/").content
+	targetURL = targetHost +"/" + targetId
+	html = requests.get(targetURL).content
 	soup = BeautifulSoup(html, 'html.parser', from_encoding='utf-8')
 	dds = soup('dd')
 	urls = []
@@ -68,11 +72,12 @@ def getURLs():
 
 		if dd.a:
 			url = dd.a['href']
-			urls.append('https://www.xxbiquge.com' + url)
+			urls.append(targetHost + url)
 
 
 	print len(urls)
 	return urls
+
 
 condition = threading.Condition()
 mongo_condition = threading.Condition()
@@ -186,6 +191,7 @@ class Thread_mongo(threading.Thread):
 				self.q.task_done()
 
 #dao - mongo
+
 class NovelMongo(object):
 
 	@staticmethod
@@ -213,6 +219,8 @@ def main():
 
 	urlQueue = Queue()
 	urls = getURLs()
+	print(urls)
+
 	for index in range(len(urls)):
 		urlQueue.put((index, urls[index]))
 
@@ -220,7 +228,7 @@ def main():
 
 	writeQueue = Queue()
 
-	collection = NovelMongo.getCollection("novel", "aNovel")
+	collection = NovelMongo.getCollection("novel", targetId)
 
 	mongo_thread_count = 3
 
@@ -258,13 +266,14 @@ def main():
 	write(collection)
 
 
-def write(collection=NovelMongo.getCollection("novel","aNovel")):
+def write(collection=NovelMongo.getCollection("novel",targetId)):
 	print "starting writing"
-	fo = open('target_003.txt', "a")
+	fo = open(targetId+'.txt', "a")
 	for dic in collection.find().sort("chapter_index"):
 		fo.write("\n\n" + dic["chapter"].encode('utf-8'))
 
 	fo.close()
+
 
 if __name__ == '__main__':
 	time1 = time.time()
